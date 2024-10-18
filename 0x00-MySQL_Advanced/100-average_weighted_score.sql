@@ -1,41 +1,26 @@
--- Change the delimiter to allow for stored procedure definition
-DELIMITER //
+-- SQL script to create a stored procedure named ComputeAverageWeightedScoreForUser
+-- This procedure computes and updates the average weighted score for a student in the users table
 
--- Create a stored procedure that computes the average weighted score for a user
-CREATE PROCEDURE ComputeAverageWeightedScoreForUser(IN user_id INT)
+-- Drop the procedure if it already exists to avoid conflicts
+DROP PROCEDURE IF EXISTS ComputeAverageWeightedScoreForUser;
+
+-- Change the delimiter to allow for the definition of the stored procedure
+DELIMITER |
+
+-- Create the stored procedure that takes a user ID as input
+CREATE PROCEDURE ComputeAverageWeightedScoreForUser (
+    IN user_id INT  -- Input parameter representing the user's ID
+)
 BEGIN
-    -- Declare variables to hold the total score, total weight, and the average weighted score
-    DECLARE total_score DECIMAL(10, 2);
-    DECLARE total_weight DECIMAL(10, 2);
-    DECLARE average_weighted_score DECIMAL(10, 2);
+    -- Update the average_score column in the users table for the specified user
+    UPDATE users
+    SET avr_scr = (
+        SELECT AVG(score)  -- Calculate the average of scores from the corrections table
+        FROM corrections
+        WHERE corrections.user_id = user_id  -- Filter scores based on the provided user ID
+    )
+    WHERE id = user_id;  -- Target the user in the users table with the matching user ID
+END|
 
-    -- Initialize the totals to zero
-    SET total_score = 0;
-    SET total_weight = 0;
-
-    -- Calculate the total weighted score for the specified user
-    SELECT SUM(score * weight) INTO total_score
-    FROM scores  -- Table containing the scores and weights
-    WHERE user_id = user_id;  -- Filter by the input user_id
-
-    -- Calculate the total weight for the specified user
-    SELECT SUM(weight) INTO total_weight
-    FROM scores  -- Table containing the scores and weights
-    WHERE user_id = user_id;  -- Filter by the input user_id
-
-    -- Calculate the average weighted score
-    IF total_weight > 0 THEN
-        SET average_weighted_score = total_score / total_weight;  -- Avoid division by zero
-    ELSE
-        SET average_weighted_score = 0; -- Handle case where there are no weights
-    END IF;
-
-    -- Store the result in a user_scores table or update if it already exists
-    INSERT INTO user_scores (user_id, average_weighted_score)
-    VALUES (user_id, average_weighted_score)  -- Insert new average score
-    ON DUPLICATE KEY UPDATE average_weighted_score = average_weighted_score;  -- Update if user_id already exists
-
-END //
-
--- Reset the delimiter back to the default
+-- Reset the delimiter back to the default to end the procedure definition
 DELIMITER ;
