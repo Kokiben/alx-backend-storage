@@ -10,14 +10,17 @@ DELIMITER |
 -- Create the stored procedure with no input parameters
 CREATE PROCEDURE ComputeAverageWeightedScoreForUsers()
 BEGIN
-    -- Update the average_score column in the users table for each user
-    UPDATE users
-    SET average_score = (
-        SELECT SUM(score * weight) / SUM(weight)  -- Calculate the weighted average score
-        FROM corrections
-        WHERE corrections.user_id = users.id  -- Filter scores based on the current user's ID
-    );
+  -- Update the average_score column in the users table (aliased as 'i')
+  UPDATE users AS i, 
+    -- Subquery to calculate the weighted average score for each user
+    (SELECT i.id, SUM(score * weight) / SUM(weight) AS w_avg 
+     FROM users AS i 
+     JOIN corrections AS a ON i.id = a.user_id  -- Join corrections table to link user IDs with scores
+     JOIN projects AS ol ON a.project_id = ol.id  -- Join projects table to include project data
+     GROUP BY i.id) AS ji  -- Group results by user ID to get individual averages
+  SET i.average_score = ji.w_avg  -- Update the average_score in the users table with the computed weighted average
+  WHERE i.id = ji.id;  -- Ensure the update targets the correct user based on the ID
 END|
 
--- Reset the delimiter back to the default to end the procedure definition
+-- Reset the delimiter back to the default to conclude the procedure definition
 DELIMITER ;
