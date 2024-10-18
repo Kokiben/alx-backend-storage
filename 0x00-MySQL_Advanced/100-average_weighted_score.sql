@@ -14,7 +14,7 @@ CREATE PROCEDURE ComputeAverageWeightedScoreForUser (
 BEGIN
     -- Update the average_score column in the users table for the specified user
     UPDATE users
-    SET avr_scr = (
+    SET average_score = (
         SELECT AVG(score)  -- Calculate the average of scores from the corrections table
         FROM corrections
         WHERE corrections.user_id = user_id  -- Filter scores based on the provided user ID
