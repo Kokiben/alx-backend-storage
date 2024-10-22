@@ -1,2 +1,2 @@
-#!/bin/bash
-mongo --quiet --eval "db.adminCommand('listDatabases')"
+// List all databases
+show dbs
