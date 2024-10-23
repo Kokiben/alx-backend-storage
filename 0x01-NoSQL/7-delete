@@ -1,0 +1,2 @@
+//The deleteMany() method is used to delete all documents
+db.school.deleteMany({ name: "Holberton school" })

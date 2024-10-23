@@ -1,0 +1,2 @@
+//The find() method is used with a query to retrieve all documents
+db.school.find({ name: "Holberton school" })
