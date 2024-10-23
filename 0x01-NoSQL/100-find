@@ -1,0 +1,2 @@
+//$regex: "^Holberton": This MongoDB query uses a regular expression to match any document
+db.school.find({ name: { $regex: "^Holberton" } })
