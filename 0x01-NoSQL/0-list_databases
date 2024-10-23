@@ -1,2 +1,7 @@
-// List all databases
-show dbs
+#!/usr/bin/env mongo
+
+// Use the admin database to execute commands
+use admin;
+
+// Show all databases
+show dbs;
