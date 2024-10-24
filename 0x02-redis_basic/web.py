@@ -14,15 +14,16 @@ def data_out(fn: Callable) -> Callable:
     @wraps(fn)
     def wra_fun(url):  # Function that wraps the original function
         """ Handles the caching logic for the decorated function. """
-        redis_instance.incr(f"count:{url}")  # Increment the URL access count in Redis
-        cached_response = redis_instance.get(f"cached:{url}")  # Retrieve the cached
+        redis_instance.incr(f"count:{url}")  # Increment the URL 
+        cached_response = redis_instance.get(f"cached:{url}")
         if cached_response:
-            return cached_response.decode('utf-8')  # Return cached response if available
-        cached_result = fn(url)  # Execute the original function to get the fresh response
-        redis_instance.setex(f"cached:{url}", 10, cached_result)  # Store the result
+            return cached_response.decode('utf-8')  # Return cache
+        cached_result = fn(url)  # Execute the original
+        redis_instance.setex(f"cached:{url}", 10, cached_result)
         return cached_result  # Return the fresh response
 
     return wra_fun  # Return the wrapper function
+
 
 @data_out  # Use the data_out decorator
 def get_page(url: str) -> str:
