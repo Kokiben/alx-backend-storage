@@ -15,13 +15,15 @@ def wrap_requests(fn: Callable) -> Callable:
     @wraps(fn)
     def wrapper(url: str) -> str:
         """Wrapper that increments access count and manages caching."""
+        
         # Increment the access count for the URL
         redis_client.incr(f"count:{url}")
 
-        # Attempt to retrieve cached response
+        # Check if a cached response exists
         cached_response = redis_client.get(f"cached:{url}")
-        if cached_response:
-            # Return the cached response if it exists
+        
+        # Return cached response if available
+        if cached_response is not None:
             return cached_response.decode('utf-8')
 
         # Call the original function to fetch the response
@@ -29,6 +31,7 @@ def wrap_requests(fn: Callable) -> Callable:
         
         # Cache the result with a 10-second expiration time
         redis_client.setex(f"cached:{url}", 10, result)
+        
         return result
 
     return wrapper
@@ -39,9 +42,3 @@ def get_page(url: str) -> str:
     response = requests.get(url)
     response.raise_for_status()  # Raise an error for bad responses
     return response.text
-
-# Example usage
-if __name__ == "__main__":
-    url = "http://slowwly.robertomurray.co.uk/delay/5000/url/http://example.com"
-    html_content = get_page(url)
-    print(html_content)
