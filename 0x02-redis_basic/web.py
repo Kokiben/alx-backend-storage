@@ -1,42 +1,46 @@
 #!/usr/bin/env python3
-""" Web cache module """
+'''A module web cache.'''
 
 import redis
 import requests
-from typing import Callable
 from functools import wraps
+from typing import Callable
 
-# Initialize Redis client
-r = redis.Redis()
+# Initialize the Redis client
+redis_store = redis.Redis()
+'''Redis inst.'''
 
-def cache_page_request(fn: Callable) -> Callable:
-    """ Decorator wrapper to handle caching and counting """
+def cache_requests(method: Callable) -> Callable:
+    '''cache the output of fetched data.'''
     
-    def cache_decorator(url: str) -> str:
-        """ Wrapper for the decorated function """
+    @wraps(method)
+    def cache_wrapper(url: str) -> str:
+        '''wrapper func for caching output.'''
         # Increment the access count for the URL
-        r.incr(f"count:{url}")
+        redis_store.incr(f'count:{url}')
         
-        # Check if the response is cached
-        cache = r.get(f"cached:{url}")
-        if cache:
-            return cache.decode('utf-8')
+        # Check if the result is cached
+        cached_result = redis_store.get(f'result:{url}')
+        if cached_result:
+            return cached_result.decode('utf-8')
         
-        # Call the actual function to get the page content
-        page_content = fn(url)
+        # Fetch the data since it's not cached
+        result = method(url)
         
-        # Cache the result with an expiration time of 10 seconds
-        r.setex(f"cached:{url}", 10, page_content)
-        return page_content
+        # Reset the access count and cache the result with expiration
+        redis_store.set(f'count:{url}', 0)
+        redis_store.setex(f'result:{url}', 10, result)
+        
+        return result
 
-    return cache_decorator
+    return cache_wrapper
 
-@cache_page_request
+@cache_requests
 def get_page(url: str) -> str:
-    """Fetches the HTML content of the specified URL."""
-    response = requests.get(url)
-    response.raise_for_status()  # Raise an error for bad responses
-    return response.text
+    '''returns content of a URL after caching request's response,
+    and track req.
+    '''
+    return requests.get(url).text
 
 # Example usage
 if __name__ == "__main__":
