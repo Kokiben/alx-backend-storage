@@ -1,48 +1,47 @@
 #!/usr/bin/env python3
-'''A module web cache.'''
+""" Expiring web cache module """
 
 import redis
 import requests
-from functools import wraps
 from typing import Callable
+from functools import wraps
 
-# Initialize the Redis client
-redis_store = redis.Redis()
-'''Redis inst.'''
+# Connect to Redis
+redis_client = redis.Redis()
 
-def cache_requests(method: Callable) -> Callable:
-    '''cache the output of fetched data.'''
-    
-    @wraps(method)
-    def cache_wrapper(url: str) -> str:
-        '''wrapper func for caching output.'''
+def wrap_requests(fn: Callable) -> Callable:
+    """Decorator wrapper for caching responses and counting accesses."""
+
+    @wraps(fn)
+    def wrapper(url: str) -> str:
+        """Wrapper that increments access count and manages caching."""
         # Increment the access count for the URL
-        redis_store.incr(f'count:{url}')
+        redis_client.incr(f"count:{url}")
+
+        # Attempt to retrieve cached response
+        cached_response = redis_client.get(f"cached:{url}")
+        if cached_response:
+            # Return the cached response if it exists
+            return cached_response.decode('utf-8')
+
+        # Call the original function to fetch the response
+        result = fn(url)
         
-        # Check if the result is cached
-        cached_result = redis_store.get(f'result:{url}')
-        if cached_result:
-            return cached_result.decode('utf-8')
-        
-        # Fetch the data since it's not cached
-        result = method(url)
-        
-        # Reset the access count and cache the result with expiration
-        redis_store.set(f'count:{url}', 0)
-        redis_store.setex(f'result:{url}', 10, result)
-        
+        # Cache the result with a 10-second expiration time
+        redis_client.setex(f"cached:{url}", 10, result)
         return result
 
-    return cache_wrapper
+    return wrapper
 
-@cache_requests
+@wrap_requests
 def get_page(url: str) -> str:
-    '''returns content of a URL after caching request's response,
-    and track req.
-    '''
-    return requests.get(url).text
+    """Fetches HTML content from the specified URL."""
+    response = requests.get(url)
+    response.raise_for_status()  # Raise an error for bad responses
+    return response.text
 
 # Example usage
 if __name__ == "__main__":
-    url = "http://slowwly.robertomurray.co.uk/delay/5000/url/http://www.example.com"
-    print(get_page(url))
+    url = "http://slowwly.robertomurray.co.uk/delay/5000/url/http://example.com"
+    html_content = get_page(url)
+    print(html_content)
