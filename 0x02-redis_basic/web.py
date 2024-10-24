@@ -1,34 +1,31 @@
 #!/usr/bin/env python3
-""" expiring web cache module """
+""" Module that implements an expiring web cache system. """
 
 import redis
 import requests
 from typing import Callable
 from functools import wraps
 
-redis = redis.Redis()
+redis_instance = redis.Redis()  # Create a Redis instance for caching
 
-
-def wrap_requests(fn: Callable) -> Callable:
-    """ Decorator wrapper """
+def data_out(fn: Callable) -> Callable:
+    """ Decorator that caches web requests and tracks access counts. """
 
     @wraps(fn)
-    def wrapper(url):
-        """ Wrapper for decorator guy """
-        redis.incr(f"count:{url}")
-        cached_response = redis.get(f"cached:{url}")
+    def wra_fun(url):  # Function that wraps the original function
+        """ Handles the caching logic for the decorated function. """
+        redis_instance.incr(f"count:{url}")  # Increment the URL access count in Redis
+        cached_response = redis_instance.get(f"cached:{url}")  # Retrieve the cached
         if cached_response:
-            return cached_response.decode('utf-8')
-        result = fn(url)
-        redis.setex(f"cached:{url}", 10, result)
-        return result
+            return cached_response.decode('utf-8')  # Return cached response if available
+        cached_result = fn(url)  # Execute the original function to get the fresh response
+        redis_instance.setex(f"cached:{url}", 10, cached_result)  # Store the result
+        return cached_result  # Return the fresh response
 
-    return wrapper
+    return wra_fun  # Return the wrapper function
 
-
-@wrap_requests
+@data_out  # Use the data_out decorator
 def get_page(url: str) -> str:
-    """get page self descriptive
-    """
-    response = requests.get(url)
-    return response.text
+    """ Fetch the content of a web page given its URL. """
+    re_pons = requests.get(url)  # Make a GET request to the specified URL
+    return re_pons.text  # Return the body of the response as text
